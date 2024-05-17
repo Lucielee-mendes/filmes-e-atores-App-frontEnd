@@ -1,57 +1,57 @@
-import * as S from './styles'
-import { useEffect, useState } from 'react';
+import * as S from './styles';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Form, Button, Alert, Row, Col } from 'react-bootstrap';
 import Header from '../../components/Header';
+import { Form, Button, Alert, Row, Col } from 'react-bootstrap';
+import { useParams } from 'react-router-dom';
 
-
-
-
-const CadastroFilme = () => {
-
+const EditarFilme = () => {
+    const { id } = useParams();
     const [titulo, setTitulo] = useState("");
     const [anoLancamento, setAnoLancamento] = useState("");
     const [disponivel, setDisponivel] = useState("");
     const [categoria, setCategoria] = useState("");
-    const [arquivoSelecionado, setArquivoSelecionado] = useState(null);
+    const [errorEdicao, setErrorEdicao] = useState('');
+    const [sucessoEdicao, setSucessoEdicao] = useState(false);
     const [atores, setAtores] = useState([]);
     const [atoresDisponiveis, setAtoresDisponiveis] = useState([]);
-    const [errorCadastro, setErrorCadastro] = useState('');
-    const [sucessoCadastro, setSucessoCadastro] = useState(false);
+    const [arquivoSelecionado, setArquivoSelecionado] = useState(null);
     const [previewImagem, setPreviewImagem] = useState(null);
 
-
     useEffect(() => {
-        // Carregar lista de atores disponíveis ao montar o componente
         fetchAtoresDisponiveis();
-    }, []);
+        fetchFilme();
+    }, [id]);
 
     const fetchAtoresDisponiveis = async () => {
         try {
             const response = await axios.get("http://localhost:3333/atores");
-          
-
+           
             setAtoresDisponiveis(response.data);
         } catch (error) {
             console.error('Erro ao buscar atores:', error);
         }
     };
 
+    const fetchFilme = async () => {
+        try {
+            const response = await axios.get(`http://localhost:3333/filmes/${id}`);
+         
 
-
-    // Função para limpar os dados do formulário após o cadastro ser realizado com sucesso
-    const limparFormulario = () => {
-        setTitulo('');
-        setAnoLancamento('');
-        setDisponivel('');
-        setCategoria('');
-        setArquivoSelecionado(null);
-        setAtores([]);
-        setErrorCadastro('');
-        setPreviewImagem(null);
+            const filme = response.data;
+            setTitulo(filme.titulo);
+            setAnoLancamento(filme.anoLancamento);
+            setDisponivel(filme.disponivel ? 'true' : 'false');
+            setCategoria(filme.categoria);
+            setAtores(filme.atores.map(ator => ator.id));
+            if (filme.imagem) {
+                setPreviewImagem(`http://localhost:3333/${filme.imagem}`);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar filme:', error);
+        }
     };
 
-    // Função para lidar com a seleção de um arquivo de imagem
     const handleArquivoChange = (e) => {
         const file = e.target.files[0];
 
@@ -62,83 +62,60 @@ const CadastroFilme = () => {
 
             leitor.onloadend = () => {
                 setPreviewImagem(leitor.result);
+               
             };
 
             leitor.readAsDataURL(file);
         }
     };
 
-
-    const handleCadastro = async () => {
-        // Validação dos campos do formulário
-       
-
-        if (titulo.length === 0 || anoLancamento.length === 0 || categoria.length === 0) {
-            setErrorCadastro("Preencha todos os campos")
-            return;
+    const handleCheckboxChange = (atorId) => {
+        const updatedAtores = [...atores];
+        const atorIndex = updatedAtores.indexOf(atorId);
+        if (atorIndex === -1) {
+            updatedAtores.push(atorId);
         } else {
-            const formData = new FormData();
-            formData.append('imagem', arquivoSelecionado);
-
-            const filmData = {
-                titulo,
-                anoLancamento: parseInt(anoLancamento),
-                disponivel: disponivel === 'true',
-                categoria,
-                atores: atores ? atores.map(ator => ator.id) : [],
-
-            };
-           
-
-            formData.append('json', JSON.stringify(filmData))
-
-            try {
-
-                // Requisição POST para cadastrar o usuário
-                const response = await axios.post("http://localhost:3333/filmes", formData);
-
-                if (response.status === 201) {
-
-                    limparFormulario();
-                    setSucessoCadastro(true);
-                    setTimeout(() => {
-                        setSucessoCadastro(false);
-                    }, 2000)
-
-                } else {
-                    console.error('Error response data:', response.data || 'No response data available');
-                    setErrorCadastro(response.data.error || 'Erro ao cadastrar filme');
-                }
-            } catch (error) {
-                console.error('Error response data:', error.response.data);
-                setErrorCadastro(`Erro ao cadastrar filme ${error.response.data.error}`);
-            }
+            updatedAtores.splice(atorIndex, 1);
         }
-
-    }
-
-
-
-    const handleCheckboxChange = (actorId) => {
-        const actor = atoresDisponiveis.find(actor => actor.id === actorId);
-        const updatedActors = [...atores];
-        const actorIndex = updatedActors.findIndex(a => a.id === actorId);
-        if (actorIndex === -1) {
-            updatedActors.push(actor);
-        } else {
-            updatedActors.splice(actorIndex, 1);
-        }
-        setAtores(updatedActors);
+        setAtores(updatedAtores);
     };
 
+    const handleEdicao = async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData();
+        formData.append('titulo', titulo);
+        formData.append('anoLancamento', anoLancamento);
+        formData.append('disponivel', disponivel === 'true');
+        formData.append('categoria', categoria);
+        if (arquivoSelecionado) {
+            formData.append('imagem', arquivoSelecionado);
+        }
+        atores.forEach(atorId => {
+            formData.append('atores', atorId);
+        });
+
+        try {
+            const response = await axios.put(`http://localhost:3333/editarFilmes/${id}`, formData);
+
+            if (response.status === 200) {
+                setSucessoEdicao(true);
+            } else {
+                setErrorEdicao('Erro ao editar filme.');
+            }
+        } catch (error) {
+            console.error('Erro ao editar filme:', error);
+            setErrorEdicao('Erro ao editar filme.');
+        }
+    };
 
     return (
-        <S.CadastroFilmeContainer>
-            <S.areaCadastro>
+        <S.EditarFilmeContainer>
+            <S.areaEditar>
                 <Header />
                 <S.area>
-                    <p id='cabecalho'> Cadastro de Filme</p>
-                    <Form>
+                    <p id='cabecalho'> Edição de Filme</p>
+                    <Form onSubmit={handleEdicao}>
                         <Form.Group controlId="formTitulo" className="mb-3">
                             <Form.Label>Título</Form.Label>
                             <Form.Control
@@ -197,7 +174,7 @@ const CadastroFilme = () => {
 
                         <Row>
                             <Col md={6}>
-                                <Form.Group controlId="formFoto"className="mb-3">
+                                <Form.Group controlId="formFoto" className="mb-3">
                                     <Form.Label>Foto do Filme</Form.Label>
                                     <Form.Control
                                         type="file"
@@ -232,7 +209,7 @@ const CadastroFilme = () => {
                                             type="checkbox"
                                             label={actor.nome}
                                             value={actor.id}
-                                            checked={atores.some(a => a.id === actor.id)}
+                                            checked={atores.includes(actor.id)}
                                             onChange={() => handleCheckboxChange(actor.id)}
                                         />
                                     </Col>
@@ -240,19 +217,22 @@ const CadastroFilme = () => {
                             </Row>
                         </Form.Group>
                         <div className="text-center">
-                            <Button variant="primary" onClick={handleCadastro} style={{ backgroundColor: '#9d5353', marginTop: '20px', fontWeight: 'bold' }}className="border-0 ">
-                                Cadastrar Filme
+                            <Button 
+                                type="submit" 
+                                variant="primary" 
+                                style={{ backgroundColor: '#9d5353', marginTop: '20px', fontWeight: 'bold' }} 
+                                className="border-0"
+                            >
+                                Editar Filme
                             </Button>
                         </div>
-                        {sucessoCadastro && <Alert variant="success">Filme cadastrado com sucesso!</Alert>}
-                        {errorCadastro && <Alert variant="danger">{errorCadastro}</Alert>}
+                        {sucessoEdicao && <Alert variant="success">Filme editado com sucesso!</Alert>}
+                        {errorEdicao && <Alert variant="danger">{errorEdicao}</Alert>}
                     </Form>
-
                 </S.area>
-            </S.areaCadastro>
-        </S.CadastroFilmeContainer>
-
+            </S.areaEditar>
+        </S.EditarFilmeContainer>
     );
 };
 
-export default CadastroFilme
+export default EditarFilme;

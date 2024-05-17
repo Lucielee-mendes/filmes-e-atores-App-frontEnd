@@ -1,6 +1,6 @@
 import styled from "styled-components";
 
-export const CadastroFilmeContainer = styled.div`
+export const CadastroAtorContainer = styled.div`
   display: grid;
   height: 100vh;
   overflow-y: auto;

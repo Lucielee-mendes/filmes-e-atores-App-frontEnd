@@ -1,12 +1,12 @@
 import styled from "styled-components";
 
-export const CadastroFilmeContainer = styled.div`
+export const EditarFilmeContainer = styled.div`
   display: grid;
   height: 100vh;
   overflow-y: auto;
   width: 100%;
 `;
-export const areaCadastro = styled.div`
+export const areaEditar = styled.div`
   position: relative;
   flex-direction: column;
   align-items: center;

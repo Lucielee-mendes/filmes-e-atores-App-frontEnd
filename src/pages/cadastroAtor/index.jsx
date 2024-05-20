@@ -21,7 +21,7 @@ const CadastroAtor = () => {
 
 
     useEffect(() => {
-        // Carregar lista de atores disponíveis ao montar o componente
+        // Carregar lista de filmes disponíveis ao montar o componente
         fetchFilmesDisponiveis();
     }, []);
 
